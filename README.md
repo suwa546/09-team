@@ -43,6 +43,28 @@ iPhoneを使う場合:
 
 OSや端末のプライバシー制限によりIMEI、バッテリー状態、充電回数を取得できない場合があります。その場合、該当欄は空欄のまま手入力してください。
 
+## にこスマ参考買取価格の取得
+
+次のコマンドで、設定した機種のA/B/Cグレード別参考買取価格を取得し、`PriceReference` テーブルへ履歴として保存します。
+
+```bash
+npm run scrape:prices
+```
+
+既定では iPhone 15 Pro、iPhone 14、Pixel 7 を対象にします。対象は `.env` の `PRICE_SCRAPE_URLS` にカンマ区切りで機種別買取ページを指定するか、コマンド引数で変更できます。
+
+```bash
+npm run scrape:prices -- https://www.nicosuma.com/sell/smartphone/iphone/iphone-15-pro
+```
+
+バッチは実行のたびに `robots.txt` を確認し、許可された公式商品ページだけを取得します。商品ページ間には最低2秒（既定3秒）の間隔を設け、1回20機種までに制限しています。同じURLの24時間以内のデータはDBキャッシュを利用します。検証などで明示的に再取得する場合だけ `--force` を付けてください。
+
+```bash
+npm run scrape:prices -- --force https://www.nicosuma.com/sell/smartphone/iphone/iphone-15-pro
+```
+
+価格とページ構造は変更される可能性があります。取得結果は参考値として扱い、サイトの利用条件とrobots.txtに変更がないか定期的に確認してください。
+
 デモアカウント:
 
 - メールアドレス: `staff@example.com`
@@ -54,6 +76,7 @@ OSや端末のプライバシー制限によりIMEI、バッテリー状態、�
 
 - Credentials 認証と STAFF / ADMIN ロール
 - ADB / libimobiledeviceを利用したUSB端末情報の自動入力
+- にこスマ公式ページからのグレード別参考買取価格バッチ
 - 検品の登録、一覧、検索、日付・状態・グレード絞り込み
 - JPEG / PNG / WebP 画像の複数アングル登録
 - Sharp と Sobel フィルタによる傷候補検出
