@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Inspect One
 
-## Getting Started
+中古スマートフォンの検査・査定を支援する Next.js アプリです。端末情報と画像を一元管理し、傷候補の検出、グレード判定、IMEI・ネットワーク利用制限の確認までを行えます。
 
-First, run the development server:
+## セットアップ
+
+Node.js 22.12 以降を使用してください。
 
 ```bash
+npm install
+cp .env.example .env
+npx prisma migrate dev
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Windows PowerShell では `cp .env.example .env` の代わりに `Copy-Item .env.example .env` を使用できます。起動後、[http://localhost:3000](http://localhost:3000) を開いてください。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+デモアカウント:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- メールアドレス: `staff@example.com`
+- パスワード: `staff1234`
 
-## Learn More
+本番環境では `AUTH_SECRET` を十分に長いランダム値へ必ず変更してください。
 
-To learn more about Next.js, take a look at the following resources:
+## 実装済み機能
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Credentials 認証と STAFF / ADMIN ロール
+- 検品の登録、一覧、検索、日付・状態・グレード絞り込み
+- JPEG / PNG / WebP 画像の複数アングル登録
+- Sharp と Sobel フィルタによる傷候補検出
+- 閾値ベースの A / B / C グレード自動判定
+- IMEI Luhn チェックとネットワーク利用制限モック
+- 検品ステータス・メモ更新
+- 件数、グレード分布、平均処理時間のダッシュボード
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+画像は開発用として `public/uploads` に保存します。本番では `saveInspectionImage` の実装を S3 互換ストレージへ差し替えてください。
 
-## Deploy on Vercel
+## 品質チェック
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run lint
+npm run test
+npm run build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+主な仕様は [docs/SPEC.md](docs/SPEC.md) を参照してください。
