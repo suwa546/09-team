@@ -10,12 +10,19 @@ export function parseAdbDevices(output) {
 }
 
 export function parseBattery(output) {
-  const level = output.match(/^\s*level:\s*(\d+)/im)?.[1];
   const cycles = output.match(/^\s*(?:cycle count|battery cycle count):\s*(\d+)/im)?.[1];
   return {
-    batteryHealth: level ? Math.min(100, Number(level)) : null,
+    batteryHealth: null,
     chargeCycles: cycles ? Number(cycles) : null,
   };
+}
+
+export function calculateBatteryHealth(fullCapacityOutput, designCapacityOutput) {
+  const fullCapacity = Number(fullCapacityOutput.trim());
+  const designCapacity = Number(designCapacityOutput.trim());
+  if (!Number.isFinite(fullCapacity) || !Number.isFinite(designCapacity) || fullCapacity <= 0 || designCapacity <= 0) return null;
+  const percentage = Math.round((fullCapacity / designCapacity) * 100);
+  return percentage > 0 && percentage <= 120 ? Math.min(100, percentage) : null;
 }
 
 export function normalizeStorageGb(sizeGb) {
@@ -49,24 +56,31 @@ export async function detectAndroid(run = runCommand) {
   const adb = process.env.ADB_PATH || "adb";
   const devices = parseAdbDevices(await run(adb, ["devices", "-l"]));
   const device = devices.find((item) => item.state === "device");
+  if (!device && devices.some((item) => item.state === "unauthorized")) {
+    throw new Error("Android端末に表示されるUSBデバッグの許可を承認してください。");
+  }
   if (!device) return null;
   const shell = (...args) => run(adb, ["-s", device.serial, "shell", ...args]);
-  const [model, storage, batteryOutput, cycleOutput, imeiOutput] = await Promise.all([
+  const [model, storage, batteryOutput, cycleOutput, sysfsCycleOutput, fullCapacity, designCapacity, imeiOutput] = await Promise.all([
     optional(() => shell("getprop", "ro.product.model")),
     optional(() => shell("df", "-k", "/data")),
     optional(() => shell("dumpsys", "battery")),
     optional(() => shell("settings", "get", "global", "battery_cycle_count")),
+    optional(() => shell("sh", "-c", "test -r /sys/class/power_supply/battery/cycle_count && cat /sys/class/power_supply/battery/cycle_count")),
+    optional(() => shell("sh", "-c", "for f in /sys/class/power_supply/battery/charge_full /sys/class/power_supply/battery/energy_full; do test -r \"$f\" && cat \"$f\" && exit 0; done; exit 1")),
+    optional(() => shell("sh", "-c", "for f in /sys/class/power_supply/battery/charge_full_design /sys/class/power_supply/battery/energy_full_design; do test -r \"$f\" && cat \"$f\" && exit 0; done; exit 1")),
     optional(async () => (await optional(() => shell("cmd", "phone", "get-imei", "0"))) || shell("service", "call", "iphonesubinfo", "1")),
   ]);
   const battery = parseBattery(batteryOutput);
-  const cycleNumber = /^\d+$/.test(cycleOutput.trim()) ? Number(cycleOutput.trim()) : battery.chargeCycles;
+  const cycleValue = [cycleOutput, sysfsCycleOutput].find((value) => /^\d+$/.test(value.trim()));
+  const cycleNumber = cycleValue ? Number(cycleValue.trim()) : battery.chargeCycles;
   return {
     connected: true,
     platform: "android",
     model: model || null,
     storageGb: parseStorageGb(storage),
     imei: parseImei(imeiOutput),
-    batteryHealth: battery.batteryHealth,
+    batteryHealth: calculateBatteryHealth(fullCapacity, designCapacity),
     chargeCycles: cycleNumber,
     missingFields: [],
   };

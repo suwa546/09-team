@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Angle = "FRONT" | "BACK" | "SCREEN";
@@ -16,31 +16,27 @@ export function InspectionForm() {
   const [batteryHealth, setBatteryHealth] = useState("");
   const [chargeCycles, setChargeCycles] = useState("");
   const [detecting, setDetecting] = useState(false);
-  const [detectMessage, setDetectMessage] = useState("USB接続された端末を確認しています…");
+  const [detectMessage, setDetectMessage] = useState("USBで端末を接続し、端末側で接続を許可してからボタンを押してください。");
 
-  const detectDevice = useCallback(async () => {
+  async function detectDevice() {
     setDetecting(true);
+    setDetectMessage("接続された端末から情報を取得しています…");
     try {
       const response = await fetch("/api/device-detect", { cache: "no-store" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "端末情報を取得できませんでした");
-      if (!result.connected) { setDetectMessage(result.message ?? "端末が見つかりません。手入力で登録できます。"); return; }
+      if (!result.connected) { setDetectMessage(result.message ?? "USB端末が見つかりません。接続と許可を確認し、もう一度押してください。"); return; }
       if (result.model) setModel(result.model);
       if (result.storageGb) setStorageGb(String(result.storageGb));
       if (result.imei) setImei(result.imei);
       if (result.batteryHealth !== null) setBatteryHealth(String(result.batteryHealth));
       if (result.chargeCycles !== null) setChargeCycles(String(result.chargeCycles));
       const platform = result.platform === "android" ? "Android" : "iPhone";
-      setDetectMessage(result.missingFields?.length ? `${platform}を検出しました。取得できない項目は手入力してください。` : `${platform}の端末情報を自動入力しました。`);
+      setDetectMessage(result.missingFields?.length ? `${platform}を検出し、取得できた情報を入力しました。空欄の項目は手入力できます。` : `${platform}の端末情報を入力しました。`);
     } catch (reason) {
-      setDetectMessage(reason instanceof Error ? `${reason.message} 手入力で登録できます。` : "端末情報を取得できませんでした。手入力で登録できます。");
+      setDetectMessage(reason instanceof Error ? `${reason.message} 空欄の項目は手入力できます。` : "端末情報を取得できませんでした。空欄の項目は手入力できます。");
     } finally { setDetecting(false); }
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => void detectDevice(), 0);
-    return () => window.clearTimeout(timer);
-  }, [detectDevice]);
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,8 +65,10 @@ export function InspectionForm() {
   return (
     <form onSubmit={submit} className="space-y-6">
       <section className="card">
-        <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold">端末情報</h2><p className="mt-1 text-xs text-slate-500">自動入力された内容も自由に修正できます。</p></div><button type="button" className="button-secondary text-sm" disabled={detecting} onClick={detectDevice}>{detecting ? "検出中…" : "USB端末を再検出"}</button></div>
+        <div><h2 className="text-lg font-bold">端末情報</h2><p className="mt-1 text-xs text-slate-500">AndroidはUSBデバッグを許可、iPhoneは「このコンピュータを信頼」を許可してください。</p></div>
+        <button type="button" className="button-primary mt-4 w-full sm:w-auto" disabled={detecting} onClick={detectDevice}>{detecting ? "端末情報を取得中…" : "USB接続した端末情報を取得"}</button>
         <p aria-live="polite" className="mt-4 rounded-xl bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800">{detectMessage}</p>
+        <p className="mt-2 text-xs text-slate-500">取得した内容はこの画面に表示され、登録前に修正できます。</p>
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <label className="field-label">モデル名<input className="input" name="model" placeholder="例: iPhone 15 Pro" required value={model} onChange={(event) => setModel(event.target.value)} /></label>
           <label className="field-label">ストレージ容量<select className="input" name="storageGb" value={storageGb} onChange={(event) => setStorageGb(event.target.value)}><option value="16">16 GB</option><option value="32">32 GB</option><option value="64">64 GB</option><option value="128">128 GB</option><option value="256">256 GB</option><option value="512">512 GB</option><option value="1024">1 TB</option><option value="2048">2 TB</option></select></label>

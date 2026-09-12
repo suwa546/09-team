@@ -18,14 +18,9 @@ Windows PowerShell では `cp .env.example .env` の代わりに `Copy-Item .env
 
 ## USB端末情報の自動取得
 
-Webアプリとは別のPowerShellを開き、ローカル端末ブリッジを起動します。
+USB検出はWebアプリのAPIに統合されているため、別のブリッジプロセスは不要です。`npm run dev`でWebアプリを起動した検品PCに端末をUSB接続し、「新規検品登録」の「USB接続した端末情報を取得」ボタンを押します。取得できた項目はフォームに表示され、登録前に修正できます。取得できない項目は手入力できます。
 
-```powershell
-cd "C:\Users\hikar\OneDrive\デスクトップ\09-team"
-npm run bridge
-```
-
-ブリッジは `127.0.0.1:4123` だけで待ち受けます。新規検品画面を開くとUSB端末を自動検出し、取得できた項目だけを入力欄へ反映します。ブリッジや端末が利用できない場合も、すべての項目を従来どおり手入力できます。
+> USB端末を検出するコマンドはWebアプリを実行しているPC上で動きます。そのため、検品画面は `localhost` のWebアプリから開いてください。
 
 Androidを使う場合:
 
@@ -37,11 +32,11 @@ Androidを使う場合:
 
 iPhoneを使う場合:
 
-1. `libimobiledevice` の `idevice_id` と `ideviceinfo` をインストールし、PATHへ追加します。
+1. `libimobiledevice` の `idevice_id`、`ideviceinfo`、`idevicediagnostics` をインストールし、PATHへ追加します。
 2. USB接続後、iPhone側で「このコンピュータを信頼」を許可します。
-3. 必要なら環境変数 `IDEVICE_ID_PATH` と `IDEVICEINFO_PATH` に実行ファイルのパスを指定します。
+3. 必要なら環境変数 `IDEVICE_ID_PATH`、`IDEVICEINFO_PATH`、`IDEVICEDIAGNOSTICS_PATH` に実行ファイルのパスを指定します。
 
-OSや端末のプライバシー制限によりIMEI、バッテリー状態、充電回数を取得できない場合があります。その場合、該当欄は空欄のまま手入力してください。
+OSや端末のプライバシー制限によりIMEI、バッテリー最大容量、充電回数を取得できない場合があります。バッテリー最大容量は、現在の充電残量ではなく、満充電容量と設計容量を取得できた場合だけ自動入力します。取得できない場合、該当欄は空欄のまま手入力してください。
 
 ## にこスマ参考買取価格の取得
 
