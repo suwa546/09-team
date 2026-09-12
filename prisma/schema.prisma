@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String
+  role         Role         @default(STAFF)
+  createdAt    DateTime     @default(now())
+  inspections  Inspection[]
+}
+
+enum Role {
+  STAFF
+  ADMIN
+}
+
+model Device {
+  id          String       @id @default(cuid())
+  model       String
+  storageGb   Int
+  imei        String
+  createdAt   DateTime     @default(now())
+  inspections Inspection[]
+
+  @@index([imei])
+}
+
+model Inspection {
+  id                String            @id @default(cuid())
+  device            Device            @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId          String
+  staff             User              @relation(fields: [staffId], references: [id])
+  staffId           String
+  status            Status            @default(PENDING)
+  grade             Grade             @default(UNRATED)
+  batteryHealth     Int?
+  chargeCycles      Int?
+  imeiValid         Boolean?
+  networkRestricted NetworkStatus     @default(UNKNOWN)
+  notes             String?
+  startedAt         DateTime          @default(now())
+  completedAt       DateTime?
+  images            InspectionImage[]
+
+  @@index([status])
+  @@index([grade])
+  @@index([startedAt])
+}
+
+enum Status {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+enum Grade {
+  A
+  B
+  C
+  UNRATED
+}
+
+enum NetworkStatus {
+  OK
+  RESTRICTED
+  UNKNOWN
+}
+
+model InspectionImage {
+  id              String      @id @default(cuid())
+  inspection      Inspection  @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  inspectionId    String
+  angle           ImageAngle
+  imageUrl        String
+  detectedDefects Json?
+  createdAt       DateTime    @default(now())
+
+  @@index([inspectionId])
+}
+
+enum ImageAngle {
+  FRONT
+  BACK
+  SCREEN
+  OTHER
+}
