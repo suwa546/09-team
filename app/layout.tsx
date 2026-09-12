@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Inspect One | スマホ検品・査定",
+  title: "スマートフォン検品システム",
   description: "中古スマートフォン検査・査定支援システム",
 };
 
