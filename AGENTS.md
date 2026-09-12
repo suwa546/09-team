@@ -14,6 +14,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # プロジェクト固有の指示（中古スマホ検査・査定システム）
 
 作業を始める前に必ず `docs/SPEC.md` を読み込み、そこに書かれた前提・スコープ・仕様に従ってください。
+またdocs/PHASE2_UPDATES.mdも必ず参照すること
 
 ## プロジェクト概要
 
