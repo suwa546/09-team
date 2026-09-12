@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "node prisma/seed.mjs"
+    "db:seed": "node prisma/seed.mjs",
+    "bridge": "node bridge/server.mjs"
   },
   "dependencies": {
     "@prisma/client": "6.12.0",

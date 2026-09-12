@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Angle = "FRONT" | "BACK" | "SCREEN";
@@ -10,6 +10,37 @@ export function InspectionForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [images, setImages] = useState<Record<Angle, File | null>>({ FRONT: null, BACK: null, SCREEN: null });
+  const [model, setModel] = useState("");
+  const [storageGb, setStorageGb] = useState("128");
+  const [imei, setImei] = useState("");
+  const [batteryHealth, setBatteryHealth] = useState("");
+  const [chargeCycles, setChargeCycles] = useState("");
+  const [detecting, setDetecting] = useState(false);
+  const [detectMessage, setDetectMessage] = useState("USB接続された端末を確認しています…");
+
+  const detectDevice = useCallback(async () => {
+    setDetecting(true);
+    try {
+      const response = await fetch("/api/device-detect", { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "端末情報を取得できませんでした");
+      if (!result.connected) { setDetectMessage(result.message ?? "端末が見つかりません。手入力で登録できます。"); return; }
+      if (result.model) setModel(result.model);
+      if (result.storageGb) setStorageGb(String(result.storageGb));
+      if (result.imei) setImei(result.imei);
+      if (result.batteryHealth !== null) setBatteryHealth(String(result.batteryHealth));
+      if (result.chargeCycles !== null) setChargeCycles(String(result.chargeCycles));
+      const platform = result.platform === "android" ? "Android" : "iPhone";
+      setDetectMessage(result.missingFields?.length ? `${platform}を検出しました。取得できない項目は手入力してください。` : `${platform}の端末情報を自動入力しました。`);
+    } catch (reason) {
+      setDetectMessage(reason instanceof Error ? `${reason.message} 手入力で登録できます。` : "端末情報を取得できませんでした。手入力で登録できます。");
+    } finally { setDetecting(false); }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void detectDevice(), 0);
+    return () => window.clearTimeout(timer);
+  }, [detectDevice]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,13 +69,14 @@ export function InspectionForm() {
   return (
     <form onSubmit={submit} className="space-y-6">
       <section className="card">
-        <h2 className="text-lg font-bold">端末情報</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold">端末情報</h2><p className="mt-1 text-xs text-slate-500">自動入力された内容も自由に修正できます。</p></div><button type="button" className="button-secondary text-sm" disabled={detecting} onClick={detectDevice}>{detecting ? "検出中…" : "USB端末を再検出"}</button></div>
+        <p aria-live="polite" className="mt-4 rounded-xl bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800">{detectMessage}</p>
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <label className="field-label">モデル名<input className="input" name="model" placeholder="例: iPhone 15 Pro" required /></label>
-          <label className="field-label">ストレージ容量<select className="input" name="storageGb" defaultValue="128"><option value="64">64 GB</option><option value="128">128 GB</option><option value="256">256 GB</option><option value="512">512 GB</option><option value="1024">1 TB</option></select></label>
-          <label className="field-label sm:col-span-2">IMEI<input className="input font-mono" name="imei" inputMode="numeric" pattern="[0-9]{15}" minLength={15} maxLength={15} placeholder="15桁の数字" required /></label>
-          <label className="field-label">バッテリー最大容量（%）<input className="input" name="batteryHealth" type="number" min="0" max="100" placeholder="例: 87" /></label>
-          <label className="field-label">充電回数<input className="input" name="chargeCycles" type="number" min="0" placeholder="例: 320" /></label>
+          <label className="field-label">モデル名<input className="input" name="model" placeholder="例: iPhone 15 Pro" required value={model} onChange={(event) => setModel(event.target.value)} /></label>
+          <label className="field-label">ストレージ容量<select className="input" name="storageGb" value={storageGb} onChange={(event) => setStorageGb(event.target.value)}><option value="16">16 GB</option><option value="32">32 GB</option><option value="64">64 GB</option><option value="128">128 GB</option><option value="256">256 GB</option><option value="512">512 GB</option><option value="1024">1 TB</option><option value="2048">2 TB</option></select></label>
+          <label className="field-label sm:col-span-2">IMEI<input className="input font-mono" name="imei" inputMode="numeric" pattern="[0-9]{15}" minLength={15} maxLength={15} placeholder="15桁の数字" required value={imei} onChange={(event) => setImei(event.target.value.replace(/\D/g, "").slice(0, 15))} /></label>
+          <label className="field-label">バッテリー最大容量（%）<input className="input" name="batteryHealth" type="number" min="0" max="100" placeholder="例: 87" value={batteryHealth} onChange={(event) => setBatteryHealth(event.target.value)} /></label>
+          <label className="field-label">充電回数<input className="input" name="chargeCycles" type="number" min="0" placeholder="例: 320" value={chargeCycles} onChange={(event) => setChargeCycles(event.target.value)} /></label>
           <label className="field-label sm:col-span-2">メモ<textarea className="input min-h-24 resize-y" name="notes" placeholder="付属品や外観についての補足" /></label>
         </div>
       </section>
